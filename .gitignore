@@ -1,3 +1,4 @@
 Debug/
-*.prefs
-*.d
+**.prefs
+**.d
+**.o
