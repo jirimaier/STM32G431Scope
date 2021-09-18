@@ -1,8 +1,0 @@
-terminal.c:19:6:terminal_init	4	static
-terminal.c:38:6:terminal_setpage	16	static
-terminal.c:47:9:numberOfDigits	24	static
-terminal.c:55:6:terminal_draw	16	static
-terminal.c:96:6:terminal_updateValues	24	static
-terminal.c:213:6:terminal_update	8	static
-terminal.c:223:6:terminal_command	88	static
-terminal.c:402:6:floatToNiceString	40	static

@@ -11,30 +11,33 @@
 #include "main.h"
 
 enum terminalpages {
-	mainpage, numberinput_pwm_freq
+	page_osc, page_gen
 } currentpage;
+
+enum terminalnumberinput {
+	input_fs, input_triglvl, input_trigch, input_pwmfreq
+} currentnumberinput;
 
 enum TriggerEdge {
 	triggerOnRising, triggerOnFalling
 };
 
 volatile struct TerminalSettings {
-	uint32_t Trigger_mV;
-	uint32_t PreTrigger_percent;
-	int8_t Fs_index;
+	double Trigger_lvl;
+	double PreTrigger;
 	uint8_t TrigCh;
 	enum TriggerEdge TriggerEdge;
-	uint8_t PWM_duty;
+	double PWM_duty;
 	uint8_t PWM_enabled;
-	int8_t Samples_index;
+	uint16_t Samples_index;
 }terminalSettings;
 
 uint8_t terminal_pageupdateneeded, terminal_pagechanged, terminal_triggerlineupdateneeded;
-
 uint32_t terminal_numericinput;
 uint32_t terminal_numericinput_decimal;
 uint8_t terminal_numericinput_has_decimal;
 uint8_t terminal_numericinput_is_negative;
+double terminal_inputmax,terminal_inputmin;
 
 char floatToNiceStringBuffer[10];
 
@@ -44,8 +47,10 @@ void terminal_command(uint8_t key);
 void terminal_update();
 void terminal_updateValues();
 void terminal_setpage(enum terminalpages page);
+void terminal_setnumberinput(enum terminalnumberinput input);
 void terminal_finishedNumberinput(uint32_t value);
 uint8_t numberOfDigits(uint32_t number);
-void floatToNiceString(double value);
+char *floatToNiceString(double value, uint8_t digits);
+char *floatToString(double value, uint8_t length);
 
 #endif /* INC_TERMINAL_H_ */

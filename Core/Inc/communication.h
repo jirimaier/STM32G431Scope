@@ -25,7 +25,7 @@ enum ConnectionStatus {
 
 void com_init();
 void com_requestack();
-void com_transmit(char *buf, uint16_t len);
+void com_transmit(const char *buf, uint16_t len);
 void com_receive(uint8_t *buf, uint32_t *len);
 uint8_t com_status();
 void com_test();

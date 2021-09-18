@@ -137,7 +137,7 @@ int main(void)
 
 		if (comstatus == 2) {
 			com_print("$$IConnected");
-			terminal_setpage(mainpage);
+			terminal_setpage(page_osc);
 			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
 		}
 
@@ -203,7 +203,7 @@ void SystemClock_Config(void)
   {
   }
 
-  /* Insure 1µs transition state at intermediate medium speed clock based on DWT */
+  /* Insure 1ï¿½s transition state at intermediate medium speed clock based on DWT */
   CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
   DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
   DWT->CYCCNT = 0;

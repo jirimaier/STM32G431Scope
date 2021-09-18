@@ -42,9 +42,9 @@ void osc_sendData();
 void osc_beginMeasuring();
 void osc_setADCSamplingCycles();
 void osc_prepareAWDGs();
-void osc_setTriggerLevel(uint32_t mV);
-void osc_setPretrigger(uint8_t percent);
-void osc_setSamplingFreq(uint32_t index);
+void osc_setTriggerLevel(double value);
+void osc_setPretrigger(double value);
+void osc_setSamplingFreq(double value);
 void osc_settrigch(uint8_t ch);
 
 #endif /* INC_OSC_H_ */

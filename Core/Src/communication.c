@@ -21,7 +21,7 @@ void com_init() {
 	lastacknumber = 1;
 }
 
-void com_transmit(char *buf, uint16_t len) {
+void com_transmit(const char *buf, uint16_t len) {
 	CDC_Transmit_FS((uint8_t*) buf, len);
 }
 

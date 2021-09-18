@@ -1,5 +1,0 @@
-pwm.c:14:6:pwm_init	8	static
-pwm.c:20:6:pwm_startStop	16	static
-pwm.c:28:8:pwm_getFreq	16	static
-pwm.c:32:6:pwm_setFreq	16	static
-pwm.c:38:6:pwm_setDuty	24	static

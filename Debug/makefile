@@ -39,34 +39,34 @@ $(wildcard ../makefile.init) \
 $(wildcard ../makefile.targets) \
 
 
-BUILD_ARTIFACT_NAME := STM32G431Scope
+BUILD_ARTIFACT_NAME := G431KB_oscilloscope
 BUILD_ARTIFACT_EXTENSION := elf
 BUILD_ARTIFACT_PREFIX :=
 BUILD_ARTIFACT := $(BUILD_ARTIFACT_PREFIX)$(BUILD_ARTIFACT_NAME)$(if $(BUILD_ARTIFACT_EXTENSION),.$(BUILD_ARTIFACT_EXTENSION),)
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXECUTABLES += \
-STM32G431Scope.elf \
+G431KB_oscilloscope.elf \
 
 SIZE_OUTPUT += \
 default.size.stdout \
 
 OBJDUMP_LIST += \
-STM32G431Scope.list \
+G431KB_oscilloscope.list \
 
 OBJCOPY_BIN += \
-STM32G431Scope.bin \
+G431KB_oscilloscope.bin \
 
 
 # All Target
 all: main-build
 
 # Main-build Target
-main-build: STM32G431Scope.elf secondary-outputs
+main-build: G431KB_oscilloscope.elf secondary-outputs
 
 # Tool invocations
-STM32G431Scope.elf: $(OBJS) $(USER_OBJS) C:\Users\Maier\OneDrive\CVUT\BP\STM32\STM32_Instruments\STM32G431Scope\STM32G431KBUX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "STM32G431Scope.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\Maier\OneDrive\CVUT\BP\STM32\STM32_Instruments\STM32G431Scope\STM32G431KBUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="STM32G431Scope.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -Wl,--start-group -lc -lm -Wl,--end-group
+G431KB_oscilloscope.elf: $(OBJS) $(USER_OBJS) C:\Users\Maier\OneDrive\CVUT\BP\STM32\CubeIDE\G431KB_oscilloscope\STM32G431KBUX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "G431KB_oscilloscope.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\Maier\OneDrive\CVUT\BP\STM32\CubeIDE\G431KB_oscilloscope\STM32G431KBUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="G431KB_oscilloscope.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -75,19 +75,19 @@ default.size.stdout: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	@echo 'Finished building: $@'
 	@echo ' '
 
-STM32G431Scope.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "STM32G431Scope.list"
+G431KB_oscilloscope.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "G431KB_oscilloscope.list"
 	@echo 'Finished building: $@'
 	@echo ' '
 
-STM32G431Scope.bin: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-objcopy  -O binary $(EXECUTABLES) "STM32G431Scope.bin"
+G431KB_oscilloscope.bin: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objcopy  -O binary $(EXECUTABLES) "G431KB_oscilloscope.bin"
 	@echo 'Finished building: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(SIZE_OUTPUT)$(OBJDUMP_LIST)$(EXECUTABLES)$(OBJS)$(S_DEPS)$(S_UPPER_DEPS)$(C_DEPS)$(OBJCOPY_BIN) STM32G431Scope.elf
+	-$(RM) $(SIZE_OUTPUT)$(OBJDUMP_LIST)$(EXECUTABLES)$(OBJS)$(S_DEPS)$(S_UPPER_DEPS)$(C_DEPS)$(OBJCOPY_BIN) G431KB_oscilloscope.elf
 	-@echo ' '
 
 secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST) $(OBJCOPY_BIN)

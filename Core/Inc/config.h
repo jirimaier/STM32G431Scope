@@ -28,6 +28,10 @@ static TIM_HandleTypeDef *timer_pwm = &htim2;
 #define PWM_PIN 8
 #define ARR_SIZE _32BIT
 
+#define ADC_RESOLUTION _12BIT
+#define ADC_REF_LOW 0.0
+#define ADC_REF_HIGH 3.3
+
 static const uint32_t samplingFreqsPresc[11] = { 10, 10, 10, 10, 20, 5, 5, 2, 2, 2, 1 };
 static const uint32_t samplingFreqsPeriod[11] = { 17000, 8500, 3400, 1700, 850, 680, 340, 425, 170, 85, 85 };
 static const uint8_t triggerCorrections1[11] = { 2, 2, 2, 2, 2, 2, 2, 3, 5, 7, 12 };
@@ -43,6 +47,7 @@ static const char *in_imp[11] = { "600k", "600k", "600k", "600k", "600k", "600k"
 static const uint16_t bufferLengths[5] = { 256, 512, 1024, 2048, 4096 };
 
 #define _16BIT 65536
+#define _12BIT 4096
 #define _32BIT 4294967296
 
 #endif /* INC_CONFIG_H_ */

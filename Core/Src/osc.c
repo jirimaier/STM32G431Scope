@@ -55,9 +55,9 @@ void osc_beginMeasuring() {
 
 	osc_prepareAWDGs();
 	osc_settrigch(terminalSettings.TrigCh);
-	osc_setTriggerLevel(terminalSettings.Trigger_mV);
-	osc_setPretrigger(terminalSettings.PreTrigger_percent);
-	osc_setSamplingFreq(terminalSettings.Fs_index);
+	osc_setTriggerLevel(terminalSettings.Trigger_lvl);
+	osc_setPretrigger(terminalSettings.PreTrigger);
+	//osc_setSamplingFreq(terminalSettings.Fs_index);
 
 	osc_setADCSamplingCycles();
 
@@ -108,7 +108,7 @@ void osc_setADCSamplingCycles() {
 	sConfig.OffsetNumber = ADC_OFFSET_NONE;
 	sConfig.Offset = 0;
 
-	sConfig.SamplingTime = samplingTimes[terminalSettings.Fs_index];
+	//sConfig.SamplingTime = samplingTimes[terminalSettings.Fs_index];
 
 	sConfig.Channel = ADC_CHANNEL_2;
 	if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) {
@@ -121,8 +121,8 @@ void osc_setADCSamplingCycles() {
 	}
 }
 
-void osc_setTriggerLevel(uint32_t mV) {
-	uint32_t triggerLevel = (4096 * mV) / 3300;
+void osc_setTriggerLevel(double value) {
+	uint32_t triggerLevel = ((value+ADC_REF_LOW) / (ADC_REF_HIGH-ADC_REF_LOW))*4096;
 
 	uint32_t levelandhist = terminalSettings.TriggerEdge == triggerOnRising ? triggerLevel - TRIGGER_HISTERESIS : triggerLevel + TRIGGER_HISTERESIS;
 
@@ -135,20 +135,13 @@ void osc_setTriggerLevel(uint32_t mV) {
 	}
 }
 
-void osc_setPretrigger(uint8_t percent) {
-	postTriggerSamples = (bufferLengths[usedSamples_index] * (100 - percent) / 100);
+void osc_setPretrigger(double value) {
+	postTriggerSamples = (bufferLengths[usedSamples_index] * (1.0 - value));
 	pretriggerRequiresFullBuffer = (postTriggerSamples < bufferLengths[usedSamples_index] / 2);
 }
 
-void osc_setSamplingFreq(uint32_t index) {
-	htim3.Init.Prescaler = samplingFreqsPresc[index] - 1;
-	htim3.Init.Period = samplingFreqsPeriod[index] - 1;
+void osc_setSamplingFreq(double value) {
 
-	triggerCorrection = triggerADC == &hadc1 ? triggerCorrections1[index] : triggerCorrections2[index];
-
-	if (HAL_TIM_Base_Init(&htim3) != HAL_OK) {
-		Error_Handler();
-	}
 }
 
 void osc_settrigch(uint8_t ch) {
