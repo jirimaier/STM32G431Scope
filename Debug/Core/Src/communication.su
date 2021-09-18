@@ -1,0 +1,7 @@
+communication.c:16:6:com_init	8	static
+communication.c:24:6:com_transmit	16	static
+communication.c:28:6:com_receive	24	static
+communication.c:46:6:com_requestack	16	static
+communication.c:55:6:com_test	16	static
+communication.c:67:6:com_print	24	static
+communication.c:72:9:com_status	4	static

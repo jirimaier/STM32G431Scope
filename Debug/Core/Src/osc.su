@@ -1,0 +1,9 @@
+osc.c:15:6:osc_init	8	static
+osc.c:30:6:osc_sendData	32	static
+osc.c:53:6:osc_beginMeasuring	8	static
+osc.c:79:6:osc_prepareAWDGs	40	static
+osc.c:104:6:osc_setADCSamplingCycles	40	static
+osc.c:124:6:osc_setTriggerLevel	24	static
+osc.c:138:6:osc_setPretrigger	16	static
+osc.c:143:6:osc_setSamplingFreq	16	static
+osc.c:154:6:osc_settrigch	16	static
