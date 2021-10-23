@@ -30,7 +30,7 @@ double pwm_getFreq() {
 }
 
 void pwm_setFreq(double value) {
-	frequency_getSettings(&(timer_pwm->Instance->PSC),&(timer_pwm->Instance->ARR),value);
+	frequency_getSettings(&(timer_pwm->Instance->PSC),&(timer_pwm->Instance->ARR),value,PWM_TIMER_MAX_ARR);
 	pwm_setDuty(terminalSettings.PWM_duty);
 
 }

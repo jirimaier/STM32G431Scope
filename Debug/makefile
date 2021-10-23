@@ -65,8 +65,8 @@ all: main-build
 main-build: STM32G431Scope.elf secondary-outputs
 
 # Tool invocations
-STM32G431Scope.elf: $(OBJS) $(USER_OBJS) C:\Users\Maier\OneDrive\CVUT\BP\STM32\STM32_Instruments\STM32G431Scope\STM32G431KBUX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "STM32G431Scope.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\Maier\OneDrive\CVUT\BP\STM32\STM32_Instruments\STM32G431Scope\STM32G431KBUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="STM32G431Scope.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -Wl,--start-group -lc -lm -Wl,--end-group
+STM32G431Scope.elf: $(OBJS) $(USER_OBJS) C:\Git\DataPlotter\Instruments\STM32G431Scope\STM32G431KBUX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "STM32G431Scope.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Git\DataPlotter\Instruments\STM32G431Scope\STM32G431KBUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="STM32G431Scope.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

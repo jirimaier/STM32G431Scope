@@ -15,7 +15,7 @@ enum terminalpages {
 } currentpage;
 
 enum terminalnumberinput {
-	input_fs, input_triglvl, input_trigch, input_pwmfreq
+	input_nothing, input_fs, input_triglvl, input_pwmfreq
 } currentnumberinput;
 
 enum TriggerEdge {
@@ -29,7 +29,7 @@ volatile struct TerminalSettings {
 	enum TriggerEdge TriggerEdge;
 	double PWM_duty;
 	uint8_t PWM_enabled;
-	uint16_t Samples_index;
+	uint16_t BufferLength;
 }terminalSettings;
 
 uint8_t terminal_pageupdateneeded, terminal_pagechanged, terminal_triggerlineupdateneeded;
@@ -39,7 +39,7 @@ uint8_t terminal_numericinput_has_decimal;
 uint8_t terminal_numericinput_is_negative;
 double terminal_inputmax,terminal_inputmin;
 
-char floatToNiceStringBuffer[10];
+char floatToNiceStringBuffer[15];
 
 void terminal_init();
 void terminal_draw();
@@ -52,5 +52,6 @@ void terminal_finishedNumberinput(uint32_t value);
 uint8_t numberOfDigits(uint32_t number);
 char *floatToNiceString(double value, uint8_t digits);
 char *floatToString(double value, uint8_t length);
+void terminal_numberFinished(double value);
 
 #endif /* INC_TERMINAL_H_ */

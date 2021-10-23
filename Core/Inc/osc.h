@@ -14,7 +14,7 @@
 volatile uint16_t postTriggerSamples;
 volatile uint8_t pretriggerRequiresFullBuffer;
 volatile uint8_t triggerCorrection;
-volatile int8_t usedSamples_index;
+volatile int16_t  currentBufferLength;
 volatile uint32_t awdgTR1Part1;
 volatile uint32_t awdgTR1Part2;
 volatile uint8_t osc_triggeredNormaly;

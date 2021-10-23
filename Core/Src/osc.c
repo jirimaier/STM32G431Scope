@@ -11,6 +11,7 @@
 #include "tim.h"
 #include "communication.h"
 #include "terminal.h"
+#include "frequency.h"
 
 void osc_init() {
 	HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
@@ -21,6 +22,8 @@ void osc_init() {
 	oscTrigState = triggerNotWaiting;
 	oscStatus = idle;
 
+	osc_setSamplingFreq(OSC_DEFAULT_FS);
+
 	oscTrigType = trig_norm;
 	htim1.Instance->CNT = 1;
 	HAL_TIM_Base_Start_IT(&htim1);
@@ -28,22 +31,22 @@ void osc_init() {
 }
 
 void osc_sendData() {
-	uint32_t begin1 = bufferLengths[usedSamples_index] - hadc1.DMA_Handle->Instance->CNDTR;
-	uint32_t begin2 = bufferLengths[usedSamples_index] - hadc2.DMA_Handle->Instance->CNDTR;
+	uint32_t begin1 = currentBufferLength - hadc1.DMA_Handle->Instance->CNDTR;
+	uint32_t begin2 = currentBufferLength - hadc2.DMA_Handle->Instance->CNDTR;
 
 	uint8_t len;
 
-	uint32_t samplingPeriod_ns = (htim3.Init.Period + 1) * (htim3.Init.Prescaler + 1) * 100 / 17;
+	double samplingPeriod = (timer_adc->Instance->PSC + 1) * (timer_adc->Instance->ARR + 1) / CPU_clock;
 
-	len = sprintf(txBuffer, "$$C1,%lue-9,%d,12,0,3.3,%d;u2", samplingPeriod_ns, bufferLengths[usedSamples_index], bufferLengths[usedSamples_index] - postTriggerSamples);
+	len = sprintf(txBuffer, "$$C1,%f,%d,12,%f,%f,%d;u2", samplingPeriod, currentBufferLength,VREF_LOW,VREF_HIGH, currentBufferLength - postTriggerSamples);
 	com_transmit(txBuffer, len);
-	com_transmit((char*) &adcBuffer1[begin1], 2 * (bufferLengths[usedSamples_index] - begin1));
+	com_transmit((char*) &adcBuffer1[begin1], 2 * (currentBufferLength - begin1));
 	com_transmit((char*) &adcBuffer1[0], 2 * begin1);
 	com_transmit(";", 1);
 
-	len = sprintf(txBuffer, "$$C2,%lue-9,%d,12,0,3.3,%d;u2", samplingPeriod_ns, bufferLengths[usedSamples_index], bufferLengths[usedSamples_index] - postTriggerSamples);
+	len = sprintf(txBuffer, "$$C2,%f,%d,12,%f,%f,%d;u2", samplingPeriod, currentBufferLength,VREF_LOW,VREF_HIGH, currentBufferLength - postTriggerSamples);
 	com_transmit(txBuffer, len);
-	com_transmit((char*) &adcBuffer2[begin2], 2 * (bufferLengths[usedSamples_index] - begin2));
+	com_transmit((char*) &adcBuffer2[begin2], 2 * (currentBufferLength - begin2));
 	com_transmit((char*) &adcBuffer2[0], 2 * begin2);
 	com_transmit(";", 1);
 
@@ -51,23 +54,22 @@ void osc_sendData() {
 }
 
 void osc_beginMeasuring() {
-	usedSamples_index = terminalSettings.Samples_index;
+	currentBufferLength = terminalSettings.BufferLength;
 
 	osc_prepareAWDGs();
 	osc_settrigch(terminalSettings.TrigCh);
 	osc_setTriggerLevel(terminalSettings.Trigger_lvl);
 	osc_setPretrigger(terminalSettings.PreTrigger);
-	//osc_setSamplingFreq(terminalSettings.Fs_index);
 
 	osc_setADCSamplingCycles();
 
-	htim1.Instance->CNT = 4 * bufferLengths[usedSamples_index];
+	htim1.Instance->CNT = 4 * currentBufferLength;
 
 	oscTrigState = triggerWaitingPretrigger;
 
-	if (HAL_ADC_Start_DMA(&hadc1, (uint32_t*) adcBuffer1, bufferLengths[usedSamples_index]) != HAL_OK)
+	if (HAL_ADC_Start_DMA(&hadc1, (uint32_t*) adcBuffer1, currentBufferLength) != HAL_OK)
 		Error_Handler();
-	if (HAL_ADC_Start_DMA(&hadc2, (uint32_t*) adcBuffer2, bufferLengths[usedSamples_index]) != HAL_OK)
+	if (HAL_ADC_Start_DMA(&hadc2, (uint32_t*) adcBuffer2, currentBufferLength) != HAL_OK)
 		Error_Handler();
 
 	if (HAL_TIM_Base_Start(&htim3) != HAL_OK)
@@ -122,7 +124,7 @@ void osc_setADCSamplingCycles() {
 }
 
 void osc_setTriggerLevel(double value) {
-	uint32_t triggerLevel = ((value+ADC_REF_LOW) / (ADC_REF_HIGH-ADC_REF_LOW))*4096;
+	uint32_t triggerLevel = ((value + ADC_REF_LOW) / (ADC_REF_HIGH - ADC_REF_LOW)) * 4096;
 
 	uint32_t levelandhist = terminalSettings.TriggerEdge == triggerOnRising ? triggerLevel - TRIGGER_HISTERESIS : triggerLevel + TRIGGER_HISTERESIS;
 
@@ -136,12 +138,15 @@ void osc_setTriggerLevel(double value) {
 }
 
 void osc_setPretrigger(double value) {
-	postTriggerSamples = (bufferLengths[usedSamples_index] * (1.0 - value));
-	pretriggerRequiresFullBuffer = (postTriggerSamples < bufferLengths[usedSamples_index] / 2);
+	postTriggerSamples = terminalSettings.BufferLength * (1.0 - value);
+	pretriggerRequiresFullBuffer = (postTriggerSamples < currentBufferLength / 2);
 }
 
 void osc_setSamplingFreq(double value) {
-
+	uint32_t psc, arr;
+	frequency_getSettings(&psc, &arr, value, ADC_TIMER_MAX_ARR);
+	timer_adc->Instance->PSC = psc;
+	timer_adc->Instance->ARR = arr;
 }
 
 void osc_settrigch(uint8_t ch) {
