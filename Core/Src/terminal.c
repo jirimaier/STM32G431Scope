@@ -27,7 +27,7 @@ void terminal_init() {
 	terminalSettings.BufferLength = 4096;
 	terminalSettings.PWM_enabled = 1;
 
-	terminal_triggerlineupdateneeded = 0;
+	terminal_triggerlineupdateneeded = 1;
 	terminal_pagechanged = 0;
 	terminal_pageupdateneeded = 0;
 	terminal_numericinput = 0;
@@ -308,8 +308,10 @@ void terminal_numberFinished(double value) {
 		pwm_setFreq(value);
 	if (currentnumberinput == input_fs && value != 0)
 		osc_setSamplingFreq(value);
-	if (currentnumberinput == input_triglvl)
+	if (currentnumberinput == input_triglvl){
 		terminalSettings.Trigger_lvl = value;
+		terminal_triggerlineupdateneeded=1;
+	}
 	terminal_setnumberinput(input_nothing);
 }
 
