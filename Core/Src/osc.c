@@ -17,7 +17,6 @@ void osc_init() {
 	HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
 	HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED);
 
-	osc_triggeredNormaly = 0;
 	pretriggerRequiresFullBuffer = 0;
 	oscTrigState = triggerNotWaiting;
 	oscStatus = idle;
@@ -25,6 +24,7 @@ void osc_init() {
 	osc_setSamplingFreq(OSC_DEFAULT_FS);
 
 	oscTrigType = trig_norm;
+	htim1.Instance->ARR = 65535;
 	htim1.Instance->CNT = 1;
 	HAL_TIM_Base_Start_IT(&htim1);
 	oscTrigType = trig_auto;
@@ -36,15 +36,15 @@ void osc_sendData() {
 
 	uint8_t len;
 
-	double samplingPeriod = (timer_adc->Instance->PSC + 1) * (timer_adc->Instance->ARR + 1) / CPU_clock;
+	double samplingPeriod = (double)(timer_adc->Instance->PSC + 1) * (double)(timer_adc->Instance->ARR + 1) / (double)CPU_clock;
 
-	len = sprintf(txBuffer, "$$C1,%f,%d,12,%f,%f,%d;u2", samplingPeriod, currentBufferLength,VREF_LOW,VREF_HIGH, currentBufferLength - postTriggerSamples);
+	len = sprintf(txBuffer, "$$C1,%f,%d,12,%f,%f,%d;u2", samplingPeriod, currentBufferLength, VREF_LOW, VREF_HIGH, currentBufferLength - postTriggerSamples);
 	com_transmit(txBuffer, len);
 	com_transmit((char*) &adcBuffer1[begin1], 2 * (currentBufferLength - begin1));
 	com_transmit((char*) &adcBuffer1[0], 2 * begin1);
 	com_transmit(";", 1);
 
-	len = sprintf(txBuffer, "$$C2,%f,%d,12,%f,%f,%d;u2", samplingPeriod, currentBufferLength,VREF_LOW,VREF_HIGH, currentBufferLength - postTriggerSamples);
+	len = sprintf(txBuffer, "$$C2,%f,%d,12,%f,%f,%d;u2", samplingPeriod, currentBufferLength, VREF_LOW, VREF_HIGH, currentBufferLength - postTriggerSamples);
 	com_transmit(txBuffer, len);
 	com_transmit((char*) &adcBuffer2[begin2], 2 * (currentBufferLength - begin2));
 	com_transmit((char*) &adcBuffer2[0], 2 * begin2);
@@ -63,7 +63,10 @@ void osc_beginMeasuring() {
 
 	osc_setADCSamplingCycles();
 
-	htim1.Instance->CNT = 4 * currentBufferLength;
+	if(oscTrigType==trig_none)
+		htim1.Instance->CNT = currentBufferLength+(currentBufferLength>>3);
+	else
+		htim1.Instance->CNT = 65535;
 
 	oscTrigState = triggerWaitingPretrigger;
 
@@ -143,10 +146,12 @@ void osc_setPretrigger(double value) {
 }
 
 void osc_setSamplingFreq(double value) {
+	osc_abort();
 	uint32_t psc, arr;
 	frequency_getSettings(&psc, &arr, value, ADC_TIMER_MAX_ARR);
 	timer_adc->Instance->PSC = psc;
 	timer_adc->Instance->ARR = arr;
+	timer_adc->Instance->CNT = 0;
 }
 
 void osc_settrigch(uint8_t ch) {
@@ -154,5 +159,12 @@ void osc_settrigch(uint8_t ch) {
 		triggerADC = &hadc1;
 	else if (ch == 2)
 		triggerADC = &hadc2;
+}
+
+void osc_abort() {
+	HAL_TIM_Base_Stop(&htim3);
+	HAL_ADC_Stop_DMA(&hadc1);
+	HAL_ADC_Stop_DMA(&hadc2);
+	oscStatus = idle;
 }
 

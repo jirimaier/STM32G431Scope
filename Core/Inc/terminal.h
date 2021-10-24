@@ -15,7 +15,7 @@ enum terminalpages {
 } currentpage;
 
 enum terminalnumberinput {
-	input_nothing, input_fs, input_triglvl, input_pwmfreq
+	input_nothing, input_fs, input_triglvl, input_pwmfreq, input_pwmduty, input_bufferlength
 } currentnumberinput;
 
 enum TriggerEdge {

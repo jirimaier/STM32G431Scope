@@ -31,13 +31,13 @@ double pwm_getFreq() {
 
 void pwm_setFreq(double value) {
 	frequency_getSettings(&(timer_pwm->Instance->PSC),&(timer_pwm->Instance->ARR),value,PWM_TIMER_MAX_ARR);
+	timer_pwm->Instance->CNT=0;
 	pwm_setDuty(terminalSettings.PWM_duty);
 
 }
 
-void pwm_setDuty(uint32_t value) {
+void pwm_setDuty(double value) {
 	uint64_t CCR = timer_pwm->Instance->ARR;
 	CCR*=value;
-	CCR/=100;
 	__HAL_TIM_SET_COMPARE(timer_pwm,PWM_TIMER_CHANNEL,(uint32_t)CCR);
 }

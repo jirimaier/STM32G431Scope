@@ -17,7 +17,6 @@ volatile uint8_t triggerCorrection;
 volatile int16_t  currentBufferLength;
 volatile uint32_t awdgTR1Part1;
 volatile uint32_t awdgTR1Part2;
-volatile uint8_t osc_triggeredNormaly;
 
 volatile enum OscStatus {
 	paused, running, idle, finished
@@ -46,5 +45,6 @@ void osc_setTriggerLevel(double value);
 void osc_setPretrigger(double value);
 void osc_setSamplingFreq(double value);
 void osc_settrigch(uint8_t ch);
+void osc_abort();
 
 #endif /* INC_OSC_H_ */

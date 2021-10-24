@@ -19,11 +19,11 @@
 #include <string.h>
 
 void terminal_init() {
-	terminalSettings.Trigger_lvl = 1.5;
+	terminalSettings.Trigger_lvl = (VREF_HIGH + VREF_LOW) / 2.0;
 	terminalSettings.PreTrigger = 0.50;
 	terminalSettings.TrigCh = 1;
 	terminalSettings.TriggerEdge = triggerOnRising;
-	terminalSettings.PWM_duty = 50;
+	terminalSettings.PWM_duty = 0.5;
 	terminalSettings.BufferLength = 4096;
 	terminalSettings.PWM_enabled = 1;
 
@@ -60,26 +60,44 @@ uint8_t numberOfDigits(uint32_t number) {
 
 void terminal_draw() {
 	if (currentpage == page_osc)
-			com_transmit(terminal_pageframe_osc, sizeof(terminal_pageframe_osc));
+		com_transmit(terminal_pageframe_osc, sizeof(terminal_pageframe_osc));
 
 	if (currentpage == page_gen)
-			com_transmit(terminal_pageframe_gen, sizeof(terminal_pageframe_gen));
+		com_transmit(terminal_pageframe_gen, sizeof(terminal_pageframe_gen));
 
 	if (currentnumberinput == input_fs) {
 		com_transmit(terminal_keypad_positive, sizeof(terminal_keypad_positive));
+		com_transmit(terminal_keypad_freqsettings, sizeof(terminal_keypad_freqsettings));
 		uint8_t len = sprintf(txBuffer, "$$T\e[0m\e[1m\e[48;5;4m\e[9;14H<");
 		com_transmit(txBuffer, len);
 	}
 
 	if (currentnumberinput == input_pwmfreq) {
 		com_transmit(terminal_keypad_positive, sizeof(terminal_keypad_positive));
-		//uint8_t len = sprintf(txBuffer, "$$T\e[0m\e[1m\e[48;5;4m\e[9;14H<", floatToString(terminalSettings.Trigger_lvl, 4));
-		//com_transmit(txBuffer, len);
+		com_transmit(terminal_keypad_freqsettings, sizeof(terminal_keypad_freqsettings));
+		uint8_t len = sprintf(txBuffer, "$$T\e[0m\e[1m\e[48;5;4m\e[4;14H<");
+		com_transmit(txBuffer, len);
+	}
+
+	if (currentnumberinput == input_bufferlength) {
+		com_transmit(terminal_keypad_uint, sizeof(terminal_keypad_uint));
+		com_transmit(terminal_keypad_buffersettings, sizeof(terminal_keypad_buffersettings));
+		uint8_t len = sprintf(txBuffer, "$$T\e[0m\e[1m\e[48;5;4m\e[7;6H<");
+		com_transmit(txBuffer, len);
+	}
+
+	if (currentnumberinput == input_pwmduty) {
+		com_transmit(terminal_keypad_positive, sizeof(terminal_keypad_positive));
+		uint8_t len = sprintf(txBuffer, "$$T\e[0m\e[1m\e[48;5;4m\e[5;14H<\e[0m\e[48;5;214m\e[20;7H \e[21;7H\e[1m%%");
+		com_transmit(txBuffer, len);
 	}
 
 	if (currentnumberinput == input_triglvl) {
-		com_transmit(VREF_LOW < 0 ? terminal_keypad_all : terminal_keypad_positive, sizeof(terminal_keypad_positive));
+		com_transmit(
+		VREF_LOW < 0 ? terminal_keypad_all : terminal_keypad_positive, sizeof(terminal_keypad_positive));
 		uint8_t len = sprintf(txBuffer, "$$T\e[0m\e[1m\e[48;5;4m\e[4;7H<");
+		com_transmit(txBuffer, len);
+		len = sprintf(txBuffer, "$$T\e[0m\e[48;5;214m\e[20;7H \e[1m\e[21;7Hm\e[22;7Hu\e[0mV\e[20;8HV\e[21;8HV");
 		com_transmit(txBuffer, len);
 	}
 
@@ -94,24 +112,61 @@ void terminal_updateValues() {
 		com_transmit(txBuffer, len);
 
 		if (terminal_triggerlineupdateneeded) {
-			len = sprintf(txBuffer, "$$Strigpos:%f;", terminalSettings.Trigger_lvl);
+			len = sprintf(txBuffer, "$$Strigpos:%f;trigch:%d;", terminalSettings.Trigger_lvl, terminalSettings.TrigCh);
 			com_transmit(txBuffer, len);
 			terminal_triggerlineupdateneeded = 0;
 		}
 
 		if (terminalSettings.TriggerEdge == triggerOnRising) {
-			len = sprintf(txBuffer, "$$T\e[4;9H\e[48;5;214m\e[37;1m/\e[0m");
+			len = sprintf(txBuffer, "$$T\e[4;14H\e[48;5;214m\e[37;1m/\e[0m");
 			com_transmit(txBuffer, len);
 		}
 
 		if (terminalSettings.TriggerEdge == triggerOnFalling) {
-			len = sprintf(txBuffer, "$$T\e[4;9H\e[48;5;214m\e[37;1m\\\e[0m");
+			len = sprintf(txBuffer, "$$T\e[4;14H\e[48;5;214m\e[37;1m\\\e[0m");
 			com_transmit(txBuffer, len);
 		}
 
-		len = sprintf(txBuffer, "$$T\e[9;1H%-10sHz", floatToNiceString(CPU_clock / ((timer_adc->Instance->PSC + 1) * (timer_adc->Instance->ARR + 1)), 7));
+		if (oscStatus == paused) {
+			len = sprintf(txBuffer, "$$T\e[0m\e[2;2H\e[47;1m\e[37;1mR\e[2;8H\e[48;5;214m\e[38;5;214mP");
+			com_transmit(txBuffer, len);
+
+		} else {
+			len = sprintf(txBuffer, "$$T\e[0m\e[2;2H\e[48;5;214m\e[38;5;214mR\e[2;8H\e[47;1m\e[37;1mP");
+			com_transmit(txBuffer, len);
+		}
+
+		if (oscTrigType == trig_auto) {
+			len = sprintf(txBuffer, "$$T\e[0m\e[5;11HAuto");
+			com_transmit(txBuffer, len);
+		}
+
+		if (oscTrigType == trig_norm) {
+			len = sprintf(txBuffer, "$$T\e[0m\e[5;11HNorm");
+			com_transmit(txBuffer, len);
+		}
+
+		if (oscTrigType == trig_none) {
+			len = sprintf(txBuffer, "$$T\e[0m\e[5;11HNone");
+			com_transmit(txBuffer, len);
+		}
+
+		len = sprintf(txBuffer, "$$T\e[0m\e[9;1H%-10sHz", floatToNiceString(
+		CPU_clock / ((timer_adc->Instance->PSC + 1) * (timer_adc->Instance->ARR + 1)), 7));
 		com_transmit(txBuffer, len);
 
+		len = sprintf(txBuffer, "$$T\e[0m\e[5;1HCh%d", terminalSettings.TrigCh);
+		com_transmit(txBuffer, len);
+
+		len = sprintf(txBuffer, "$$T\e[0m\e[7;1H%5d", terminalSettings.BufferLength);
+		com_transmit(txBuffer, len);
+
+	} else if (currentpage == page_gen) {
+		len = sprintf(txBuffer, "$$T\e[0m\e[4;1H%-10sHz", floatToNiceString( CPU_clock / ((timer_pwm->Instance->PSC + 1) * (timer_pwm->Instance->ARR + 1)), 7));
+		com_transmit(txBuffer, len);
+
+		len = sprintf(txBuffer, "$$T\e[0m\e[5;1HDuty: %.2f%%", ((float) __HAL_TIM_GET_COMPARE(timer_pwm, PWM_TIMER_CHANNEL)) / ((float) timer_pwm->Instance->ARR) * 100.0);
+		com_transmit(txBuffer, len);
 	}
 
 	if (currentnumberinput != input_nothing) {
@@ -157,59 +212,158 @@ void terminal_command(uint8_t key) {
 				terminalSettings.TriggerEdge = triggerOnFalling;
 		}
 
-		if (key == 'f') {
+		if (key == 'f')
 			terminal_setnumberinput(input_fs);
-		}
 
-		if (key == 't') {
+		if (key == 't')
 			terminal_setnumberinput(input_triglvl);
+
+		if (key == 'b')
+			terminal_setnumberinput(input_bufferlength);
+
+		if (key == 'c')
+			terminalSettings.BufferLength = 1;
+
+		if (key == '>')
+			terminal_setpage(page_gen);
+
+		if (key == 'R') {
+			osc_abort();
+			oscStatus = idle;
 		}
 
-		if(key == '>'){
-			terminal_setpage(page_gen);
+		if (key == 'P') {
+			osc_abort();
+			oscStatus = paused;
+		}
+
+		if (key == 's') {
+			terminalSettings.TrigCh = terminalSettings.TrigCh % CHANNEL_COUNT + 1;
+			terminal_triggerlineupdateneeded = 1;
+		}
+
+		if (key == 'S') {
+			osc_abort();
+			oscTrigType = trig_single;
+		}
+
+		if (key == 'T') {
+			osc_abort();
+			if (oscTrigType == trig_auto)
+				oscTrigType = trig_norm;
+			else if (oscTrigType == trig_norm)
+				oscTrigType = trig_none;
+			else if (oscTrigType == trig_none)
+				oscTrigType = trig_auto;
 		}
 	}
 
 	else if (currentpage == page_gen) {
 
-		if(key == '>'){
-					terminal_setpage(page_osc);
-				}
+		if (key == '>')
+			terminal_setpage(page_osc);
+
+		if (key == 'P')
+			terminal_setnumberinput(input_pwmfreq);
+
+		if (key == 'D')
+			terminal_setnumberinput(input_pwmduty);
 	}
 
-	if (key == ' ') {
-		double value = terminal_numericinput + terminal_numericinput_decimal / pow(10, numberOfDigits(terminal_numericinput_decimal));
-		value *= 1;
-		terminal_numberFinished(value);
-		terminal_numericinput = 0;
-	} else if (key == 'k') {
-		double value = terminal_numericinput + terminal_numericinput_decimal / pow(10, numberOfDigits(terminal_numericinput_decimal));
-		value *= 1000;
-		terminal_numberFinished(value);
-		terminal_numericinput = 0;
-	} else if (key == 'M') {
-		double value = terminal_numericinput + terminal_numericinput_decimal / pow(10, numberOfDigits(terminal_numericinput_decimal));
-		value *= 1000000;
-		terminal_numberFinished(value);
-		terminal_numericinput = 0;
-	} else if (key == 's') {
-		double value = terminal_numericinput + terminal_numericinput_decimal / pow(10, numberOfDigits(terminal_numericinput_decimal));
-		value = 1 / value;
-		terminal_numberFinished(value);
-		terminal_numericinput = 0;
-	} else if (key == 'm') {
-		double value = terminal_numericinput + terminal_numericinput_decimal / pow(10, numberOfDigits(terminal_numericinput_decimal));
-		value = 1000 / value;
-		terminal_numberFinished(value);
-		terminal_numericinput = 0;
-	} else if (key == 'u') {
-		double value = terminal_numericinput + terminal_numericinput_decimal / pow(10, numberOfDigits(terminal_numericinput_decimal));
-		value = 1000000 / value;
-		terminal_numberFinished(value);
-		terminal_numericinput = 0;
+	if (currentnumberinput == input_fs || currentnumberinput == input_pwmfreq) {
+		if (key == ' ') {
+			double value = terminal_numericinput + terminal_numericinput_decimal / pow(10, numberOfDigits(terminal_numericinput_decimal));
+			terminal_numberFinished(value);
+			terminal_numericinput = 0;
+		} else if (key == 'k') {
+			double value = terminal_numericinput + terminal_numericinput_decimal / pow(10, numberOfDigits(terminal_numericinput_decimal));
+			value *= 1000.0;
+			terminal_numberFinished(value);
+			terminal_numericinput = 0;
+		} else if (key == 'M') {
+			double value = terminal_numericinput + terminal_numericinput_decimal / pow(10, numberOfDigits(terminal_numericinput_decimal));
+			value *= 1000000.0;
+			terminal_numberFinished(value);
+			terminal_numericinput = 0;
+		} else if (key == 'm') {
+			double value = terminal_numericinput + terminal_numericinput_decimal / pow(10, numberOfDigits(terminal_numericinput_decimal));
+			value *= 0.001;
+			terminal_numberFinished(1.0 / value);
+			terminal_numericinput = 0;
+		} else if (key == 'u') {
+			double value = terminal_numericinput + terminal_numericinput_decimal / pow(10, numberOfDigits(terminal_numericinput_decimal));
+			value *= 0.000001;
+			terminal_numberFinished(1.0 / value);
+			terminal_numericinput = 0;
+		}
 	}
 
-	else if (key >= '0' && key <= '9') {
+	if (currentnumberinput == input_triglvl) {
+		if (key == ' ') {
+			double value = terminal_numericinput + terminal_numericinput_decimal / pow(10, numberOfDigits(terminal_numericinput_decimal));
+			terminal_numberFinished(value);
+			terminal_numericinput = 0;
+		} else if (key == 'm') {
+			double value = terminal_numericinput + terminal_numericinput_decimal / pow(10, numberOfDigits(terminal_numericinput_decimal));
+			value *= 0.001;
+			terminal_numberFinished(value);
+			terminal_numericinput = 0;
+		} else if (key == 'u') {
+			double value = terminal_numericinput + terminal_numericinput_decimal / pow(10, numberOfDigits(terminal_numericinput_decimal));
+			value *= 0.000001;
+			terminal_numberFinished(value);
+			terminal_numericinput = 0;
+		}
+	}
+
+	if (currentnumberinput == input_pwmduty) {
+		if (key == ' ') {
+			double value = terminal_numericinput + terminal_numericinput_decimal / pow(10, numberOfDigits(terminal_numericinput_decimal));
+			terminal_numberFinished(value);
+			terminal_numericinput = 0;
+		} else if (key == '%') {
+			double value = terminal_numericinput + terminal_numericinput_decimal / pow(10, numberOfDigits(terminal_numericinput_decimal));
+			terminal_numberFinished(value / 100.0);
+			terminal_numericinput = 0;
+		}
+	}
+
+	if (currentnumberinput == input_bufferlength) {
+		if (key == ' ') {
+			double value = terminal_numericinput + terminal_numericinput_decimal / pow(10, numberOfDigits(terminal_numericinput_decimal));
+			terminal_numberFinished(value);
+			terminal_numericinput = 0;
+		}
+
+		if (key == 'A') {
+			double value = 512;
+			terminal_numberFinished(value);
+			terminal_numericinput = 0;
+		}
+		if (key == 'B') {
+			double value = 1024;
+			terminal_numberFinished(value);
+			terminal_numericinput = 0;
+		}
+		if (key == 'C') {
+			double value = 2048;
+			terminal_numberFinished(value);
+			terminal_numericinput = 0;
+		}
+		if (key == 'D') {
+			double value = 4096;
+			terminal_numberFinished(value);
+			terminal_numericinput = 0;
+		}
+		if (key == 'M') {
+			double value = terminal_inputmax;
+			terminal_numberFinished(value);
+			terminal_numericinput = 0;
+		}
+
+	}
+
+	if (key >= '0' && key <= '9') {
 		if (key == '0' && terminal_numericinput == 0)
 			terminal_numericinput_has_decimal = 1;
 		uint32_t *value = terminal_numericinput_has_decimal ? &terminal_numericinput_decimal : &terminal_numericinput;
@@ -290,9 +444,14 @@ void terminal_setnumberinput(enum terminalnumberinput input) {
 		terminal_inputmin = 0;
 	}
 
-	if (input == input_triglvl) {
-		terminal_inputmax = VREF_HIGH;
-		terminal_inputmin = VREF_LOW;
+	if (input == input_bufferlength) {
+		terminal_inputmax = BUFFER_SIZE / CHANNEL_COUNT;
+		terminal_inputmin = 1;
+	}
+
+	if (input == input_pwmduty) {
+		terminal_inputmax = 1;
+		terminal_inputmin = 0;
 	}
 
 	terminal_pagechanged = 1;
@@ -304,14 +463,18 @@ void terminal_numberFinished(double value) {
 	if (value < terminal_inputmin)
 		value = terminal_inputmin;
 
-	if (currentnumberinput == input_pwmfreq && value !=0)
+	if (currentnumberinput == input_pwmfreq && value != 0)
 		pwm_setFreq(value);
 	if (currentnumberinput == input_fs && value != 0)
 		osc_setSamplingFreq(value);
-	if (currentnumberinput == input_triglvl){
+	if (currentnumberinput == input_triglvl) {
 		terminalSettings.Trigger_lvl = value;
-		terminal_triggerlineupdateneeded=1;
+		terminal_triggerlineupdateneeded = 1;
 	}
+	if (currentnumberinput == input_pwmduty)
+		pwm_setDuty(value);
+	if (currentnumberinput == input_bufferlength)
+		terminalSettings.BufferLength = value;
 	terminal_setnumberinput(input_nothing);
 }
 

@@ -34,6 +34,8 @@ static TIM_HandleTypeDef *timer_pwm = &htim2;
 #define PWM_PIN 8
 #define PWM_TIMER_MAX_ARR _32BIT
 
+#define CHANNEL_COUNT 2
+
 static TIM_HandleTypeDef *timer_adc = &htim3;
 #define ADC_RESOLUTION _12BIT
 #define ADC_REF_LOW 0.0
