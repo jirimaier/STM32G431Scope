@@ -17,6 +17,8 @@ void osc_init() {
 	HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
 	HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED);
 
+	HAL_Delay(10);
+
 	pretriggerRequiresFullBuffer = 0;
 	oscTrigState = triggerNotWaiting;
 	oscStatus = idle;
@@ -38,13 +40,13 @@ void osc_sendData() {
 
 	double samplingPeriod = (double)(timer_adc->Instance->PSC + 1) * (double)(timer_adc->Instance->ARR + 1) / (double)CPU_clock;
 
-	len = sprintf(txBuffer, "$$C1,%f,%d,12,%f,%f,%d;u2", samplingPeriod, currentBufferLength, VREF_LOW, VREF_HIGH, currentBufferLength - postTriggerSamples);
+	len = sprintf(txBuffer, "$$C1,%e,%d,12,%f,%f,%d;u2", samplingPeriod, currentBufferLength, VREF_LOW, VREF_HIGH, currentBufferLength - postTriggerSamples);
 	com_transmit(txBuffer, len);
 	com_transmit((char*) &adcBuffer1[begin1], 2 * (currentBufferLength - begin1));
 	com_transmit((char*) &adcBuffer1[0], 2 * begin1);
 	com_transmit(";", 1);
 
-	len = sprintf(txBuffer, "$$C2,%f,%d,12,%f,%f,%d;u2", samplingPeriod, currentBufferLength, VREF_LOW, VREF_HIGH, currentBufferLength - postTriggerSamples);
+	len = sprintf(txBuffer, "$$C2,%e,%d,12,%f,%f,%d;u2", samplingPeriod, currentBufferLength, VREF_LOW, VREF_HIGH, currentBufferLength - postTriggerSamples);
 	com_transmit(txBuffer, len);
 	com_transmit((char*) &adcBuffer2[begin2], 2 * (currentBufferLength - begin2));
 	com_transmit((char*) &adcBuffer2[0], 2 * begin2);
@@ -70,9 +72,13 @@ void osc_beginMeasuring() {
 
 	oscTrigState = triggerWaitingPretrigger;
 
-	if (HAL_ADC_Start_DMA(&hadc1, (uint32_t*) adcBuffer1, currentBufferLength) != HAL_OK)
+
+
+	SET_BIT(hadc2.Instance->CFGR, ADC_CFGR_DMAEN);
+	SET_BIT(hadc1.Instance->CFGR, ADC_CFGR_DMAEN);
+	if (HAL_DMA_Start_IT(hadc2.DMA_Handle, (uint32_t)&hadc2.Instance->DR, (uint32_t)adcBuffer2, currentBufferLength) != HAL_OK)
 		Error_Handler();
-	if (HAL_ADC_Start_DMA(&hadc2, (uint32_t*) adcBuffer2, currentBufferLength) != HAL_OK)
+	if (HAL_ADCEx_MultiModeStart_DMA(&hadc1, (uint32_t*) adcBuffer1, currentBufferLength) != HAL_OK)
 		Error_Handler();
 
 	if (HAL_TIM_Base_Start(&htim3) != HAL_OK)
@@ -163,8 +169,8 @@ void osc_settrigch(uint8_t ch) {
 
 void osc_abort() {
 	HAL_TIM_Base_Stop(&htim3);
-	HAL_ADC_Stop_DMA(&hadc1);
-	HAL_ADC_Stop_DMA(&hadc2);
+	HAL_ADCEx_MultiModeStop_DMA(&hadc1);
+	HAL_DMA_Abort(hadc2.DMA_Handle);
 	oscStatus = idle;
 }
 

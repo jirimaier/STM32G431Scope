@@ -30,7 +30,7 @@
 static TIM_HandleTypeDef *timer_pwm = &htim2;
 #define PWM_TIMER_CHANNEL  TIM_CHANNEL_4
 #define MAX_PWM_FREQ 20000000.0
-#define MAX_Fs 5000000.0
+#define MAX_Fs 4000000.0
 #define PWM_PIN 8
 #define PWM_TIMER_MAX_ARR _32BIT
 
@@ -44,14 +44,6 @@ static TIM_HandleTypeDef *timer_adc = &htim3;
 
 #define VREF_LOW 0.0
 #define VREF_HIGH 3.3
-
-static const uint32_t samplingTimes[11] = { ADC_SAMPLETIME_640CYCLES_5, ADC_SAMPLETIME_640CYCLES_5, ADC_SAMPLETIME_640CYCLES_5,
-ADC_SAMPLETIME_640CYCLES_5, ADC_SAMPLETIME_640CYCLES_5, ADC_SAMPLETIME_640CYCLES_5,
-ADC_SAMPLETIME_247CYCLES_5, ADC_SAMPLETIME_92CYCLES_5, ADC_SAMPLETIME_47CYCLES_5,
-ADC_SAMPLETIME_24CYCLES_5, ADC_SAMPLETIME_6CYCLES_5 };
-
-static const char *cycles[11] = { "640.5", "640.5", "640.5", "640.5", "640.5", "640.5", "247.5", "92.5", "47.5", "24.5", "6.5" };
-static const char *in_imp[11] = { "600k", "600k", "600k", "600k", "600k", "600k", "230k", "87k", "44k", "23k", "6100" };
 
 static const uint16_t bufferLengths[5] = { 256, 512, 1024, 2048, 4096 };
 
