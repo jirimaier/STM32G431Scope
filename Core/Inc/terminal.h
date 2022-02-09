@@ -30,6 +30,7 @@ volatile struct TerminalSettings {
 	double PWM_duty;
 	uint8_t PWM_enabled;
 	uint16_t BufferLength;
+	uint8_t NumChPerADC;
 }terminalSettings;
 
 uint8_t terminal_pageupdateneeded, terminal_pagechanged, terminal_triggerlineupdateneeded;

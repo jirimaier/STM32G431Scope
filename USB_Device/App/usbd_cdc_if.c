@@ -304,7 +304,7 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
 	result = USBD_CDC_TransmitPacket(&hUsbDeviceFS);
 
 	// Můj kód -------------------
-	for (uint32_t usbTimeout = 100000; usbTimeout > 0; usbTimeout--) {
+	for (uint32_t usbTimeout = 1000000; usbTimeout > 0; usbTimeout--) {
 		if (hcdc->TxState == 0)
 			break;
 	}

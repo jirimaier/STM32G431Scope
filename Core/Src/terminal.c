@@ -26,6 +26,7 @@ void terminal_init() {
 	terminalSettings.PWM_duty = 0.5;
 	terminalSettings.BufferLength = 4096;
 	terminalSettings.PWM_enabled = 1;
+	terminalSettings.NumChPerADC = 1;
 
 	terminal_triggerlineupdateneeded = 1;
 	terminal_pagechanged = 0;
@@ -59,6 +60,8 @@ uint8_t numberOfDigits(uint32_t number) {
 }
 
 void terminal_draw() {
+	uint8_t len = sprintf(txBuffer, "$$Stermsize:nb;");
+			com_transmit(txBuffer, len);
 	if (currentpage == page_osc)
 		com_transmit(terminal_pageframe_osc, sizeof(terminal_pageframe_osc));
 
@@ -151,6 +154,15 @@ void terminal_updateValues() {
 			com_transmit(txBuffer, len);
 		}
 
+		if (terminalSettings.NumChPerADC == 2) {
+			len = sprintf(txBuffer, "$$T\e[0m\e[12;1HCh:  1  2 3  4\r\nPin: 6 11 7 12");
+			com_transmit(txBuffer, len);
+		}
+		if (terminalSettings.NumChPerADC == 1) {
+			len = sprintf(txBuffer, "$$T\e[0m\e[12;1HCh:  1  2     \r\nPin: 6 11     ");
+			com_transmit(txBuffer, len);
+		}
+
 		len = sprintf(txBuffer, "$$T\e[0m\e[9;1H%-10sHz", floatToNiceString(
 		CPU_clock / ((timer_adc->Instance->PSC + 1) * (timer_adc->Instance->ARR + 1)), 7));
 		com_transmit(txBuffer, len);
@@ -162,7 +174,8 @@ void terminal_updateValues() {
 		com_transmit(txBuffer, len);
 
 	} else if (currentpage == page_gen) {
-		len = sprintf(txBuffer, "$$T\e[0m\e[4;1H%-10sHz", floatToNiceString( CPU_clock / ((timer_pwm->Instance->PSC + 1) * (timer_pwm->Instance->ARR + 1)), 7));
+		len = sprintf(txBuffer, "$$T\e[0m\e[4;1H%-10sHz", floatToNiceString(
+		CPU_clock / ((timer_pwm->Instance->PSC + 1) * (timer_pwm->Instance->ARR + 1)), 7));
 		com_transmit(txBuffer, len);
 
 		len = sprintf(txBuffer, "$$T\e[0m\e[5;1HDuty: %.2f%%", ((float) __HAL_TIM_GET_COMPARE(timer_pwm, PWM_TIMER_CHANNEL)) / ((float) timer_pwm->Instance->ARR) * 100.0);
@@ -230,21 +243,29 @@ void terminal_command(uint8_t key) {
 		if (key == 'R') {
 			osc_abort();
 			oscStatus = idle;
+			osc_singleTrigger = 0;
 		}
 
 		if (key == 'P') {
 			osc_abort();
 			oscStatus = paused;
+			osc_singleTrigger = 0;
+		}
+
+		if (key == 'z') {
+			terminalSettings.NumChPerADC = (terminalSettings.NumChPerADC % 2) + 1;
+			osc_setNumCh(terminalSettings.NumChPerADC);
 		}
 
 		if (key == 's') {
-			terminalSettings.TrigCh = terminalSettings.TrigCh % CHANNEL_COUNT + 1;
+			terminalSettings.TrigCh = (terminalSettings.TrigCh % (2*terminalSettings.NumChPerADC)) + 1;
 			terminal_triggerlineupdateneeded = 1;
 		}
 
 		if (key == 'S') {
 			osc_abort();
-			oscTrigType = trig_single;
+			osc_singleTrigger = 1;
+			oscTrigType = trig_norm;
 		}
 
 		if (key == 'T') {
@@ -284,6 +305,10 @@ void terminal_command(uint8_t key) {
 			double value = terminal_numericinput + terminal_numericinput_decimal / pow(10, numberOfDigits(terminal_numericinput_decimal));
 			value *= 1000000.0;
 			terminal_numberFinished(value);
+			terminal_numericinput = 0;
+		} else if (key == 'n') {
+			double value = terminal_numericinput + terminal_numericinput_decimal / pow(10, numberOfDigits(terminal_numericinput_decimal));
+			terminal_numberFinished(1.0 / value);
 			terminal_numericinput = 0;
 		} else if (key == 'm') {
 			double value = terminal_numericinput + terminal_numericinput_decimal / pow(10, numberOfDigits(terminal_numericinput_decimal));
@@ -445,7 +470,7 @@ void terminal_setnumberinput(enum terminalnumberinput input) {
 	}
 
 	if (input == input_bufferlength) {
-		terminal_inputmax = BUFFER_SIZE / CHANNEL_COUNT;
+		terminal_inputmax = BUFFER_SIZE / terminalSettings.NumChPerADC;
 		terminal_inputmin = 1;
 	}
 

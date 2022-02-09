@@ -16,15 +16,16 @@
 #define _32BIT 4294967296
 
 #define CPU_clock (170E6)
+#define ADC_clock (CPU_clock/4)
 
-#define BUFFER_SIZE 8192
+#define BUFFER_SIZE 4096
 #define TRIGGER_HISTERESIS 200
-#define TX_BUFFER_SIZE 100
+#define TX_BUFFER_SIZE 200
 
 // Rate of LED blinking when waiting for connection: n-times slower than connection check
 #define LED_BLINK_NOT_CONNECTED 2
 
-#define DEFAULT_PWM_FREQ 10000.0
+#define DEFAULT_PWM_FREQ 1000.0
 #define OSC_DEFAULT_FS 100000.0
 
 static TIM_HandleTypeDef *timer_pwm = &htim2;
@@ -33,8 +34,6 @@ static TIM_HandleTypeDef *timer_pwm = &htim2;
 #define MAX_Fs 4000000.0
 #define PWM_PIN 8
 #define PWM_TIMER_MAX_ARR _32BIT
-
-#define CHANNEL_COUNT 2
 
 static TIM_HandleTypeDef *timer_adc = &htim3;
 #define ADC_RESOLUTION _12BIT

@@ -67,11 +67,9 @@ void TIM1_BRK_TIM15_IRQHandler(void);
 void TIM1_UP_TIM16_IRQHandler(void);
 void TIM1_TRG_COM_TIM17_IRQHandler(void);
 void TIM1_CC_IRQHandler(void);
-void TIM3_IRQHandler(void);
 void TIM6_DAC_IRQHandler(void);
 void DMA2_Channel2_IRQHandler(void);
 void FPU_IRQHandler(void);
-void DMAMUX_OVR_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */

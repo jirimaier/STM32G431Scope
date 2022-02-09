@@ -22,6 +22,10 @@ void osc_init() {
 	pretriggerRequiresFullBuffer = 0;
 	oscTrigState = triggerNotWaiting;
 	oscStatus = idle;
+	osc_singleTrigger = 0;
+	trigSubCh = 0;
+
+	osc_setNumCh(terminalSettings.NumChPerADC);
 
 	osc_setSamplingFreq(OSC_DEFAULT_FS);
 
@@ -33,52 +37,56 @@ void osc_init() {
 }
 
 void osc_sendData() {
-	uint32_t begin1 = currentBufferLength - hadc1.DMA_Handle->Instance->CNDTR;
-	uint32_t begin2 = currentBufferLength - hadc2.DMA_Handle->Instance->CNDTR;
+	uint32_t begin1 = currentBufferLength*terminalSettings.NumChPerADC - hadc1.DMA_Handle->Instance->CNDTR;
+	uint32_t begin2 = currentBufferLength*terminalSettings.NumChPerADC - hadc2.DMA_Handle->Instance->CNDTR;
 
 	uint8_t len;
 
-	double samplingPeriod = (double)(timer_adc->Instance->PSC + 1) * (double)(timer_adc->Instance->ARR + 1) / (double)CPU_clock;
+	double samplingPeriod = (double) (timer_adc->Instance->PSC + 1) * (double) (timer_adc->Instance->ARR + 1) / (double) CPU_clock;
 
-	len = sprintf(txBuffer, "$$C1,%e,%d,12,%f,%f,%d;u2", samplingPeriod, currentBufferLength, VREF_LOW, VREF_HIGH, currentBufferLength - postTriggerSamples);
+	if (terminalSettings.NumChPerADC == 2)
+		len = sprintf(txBuffer, "$$C1+3,%e,%d,12,%f,%f,%d;u2", samplingPeriod, currentBufferLength*terminalSettings.NumChPerADC, VREF_LOW, VREF_HIGH, currentBufferLength - postTriggerSamples);
+	else
+		len = sprintf(txBuffer, "$$Sclearch:3;$$C1,%e,%d,12,%f,%f,%d;u2", samplingPeriod, currentBufferLength*terminalSettings.NumChPerADC, VREF_LOW, VREF_HIGH, currentBufferLength - postTriggerSamples);
 	com_transmit(txBuffer, len);
-	com_transmit((char*) &adcBuffer1[begin1], 2 * (currentBufferLength - begin1));
+	com_transmit((char*) &adcBuffer1[begin1], 2 * (currentBufferLength*terminalSettings.NumChPerADC - begin1));
 	com_transmit((char*) &adcBuffer1[0], 2 * begin1);
 	com_transmit(";", 1);
 
-	len = sprintf(txBuffer, "$$C2,%e,%d,12,%f,%f,%d;u2", samplingPeriod, currentBufferLength, VREF_LOW, VREF_HIGH, currentBufferLength - postTriggerSamples);
+	if (terminalSettings.NumChPerADC == 2)
+		len = sprintf(txBuffer, "$$C2+4,%e,%d,12,%f,%f,%d;u2", samplingPeriod, currentBufferLength*terminalSettings.NumChPerADC, VREF_LOW, VREF_HIGH, currentBufferLength - postTriggerSamples);
+	else
+		len = sprintf(txBuffer, "$$Sclearch:4;$$C2,%e,%d,12,%f,%f,%d;u2", samplingPeriod, currentBufferLength*terminalSettings.NumChPerADC, VREF_LOW, VREF_HIGH, currentBufferLength - postTriggerSamples);
 	com_transmit(txBuffer, len);
-	com_transmit((char*) &adcBuffer2[begin2], 2 * (currentBufferLength - begin2));
+	com_transmit((char*) &adcBuffer2[begin2], 2 * (currentBufferLength*terminalSettings.NumChPerADC - begin2));
 	com_transmit((char*) &adcBuffer2[0], 2 * begin2);
 	com_transmit(";", 1);
-
-	oscStatus = idle;
 }
 
 void osc_beginMeasuring() {
 	currentBufferLength = terminalSettings.BufferLength;
+	if (currentBufferLength > BUFFER_SIZE / terminalSettings.NumChPerADC)
+		currentBufferLength = BUFFER_SIZE / terminalSettings.NumChPerADC;
 
-	osc_prepareAWDGs();
 	osc_settrigch(terminalSettings.TrigCh);
 	osc_setTriggerLevel(terminalSettings.Trigger_lvl);
 	osc_setPretrigger(terminalSettings.PreTrigger);
+	osc_prepareAWDGs();
 
 	osc_setADCSamplingCycles();
 
-	if(oscTrigType==trig_none)
-		htim1.Instance->CNT = currentBufferLength+(currentBufferLength>>3);
+	if (oscTrigType == trig_none || currentBufferLength == 1)
+		htim1.Instance->CNT = currentBufferLength + (currentBufferLength >> 3);
 	else
 		htim1.Instance->CNT = 65535;
 
 	oscTrigState = triggerWaitingPretrigger;
 
-
-
 	SET_BIT(hadc2.Instance->CFGR, ADC_CFGR_DMAEN);
 	SET_BIT(hadc1.Instance->CFGR, ADC_CFGR_DMAEN);
-	if (HAL_DMA_Start_IT(hadc2.DMA_Handle, (uint32_t)&hadc2.Instance->DR, (uint32_t)adcBuffer2, currentBufferLength) != HAL_OK)
+	if (HAL_DMA_Start_IT(hadc2.DMA_Handle, (uint32_t) &hadc2.Instance->DR, (uint32_t) adcBuffer2, currentBufferLength * terminalSettings.NumChPerADC) != HAL_OK)
 		Error_Handler();
-	if (HAL_ADCEx_MultiModeStart_DMA(&hadc1, (uint32_t*) adcBuffer1, currentBufferLength) != HAL_OK)
+	if (HAL_ADCEx_MultiModeStart_DMA(&hadc1, (uint32_t*) adcBuffer1, currentBufferLength * terminalSettings.NumChPerADC) != HAL_OK)
 		Error_Handler();
 
 	if (HAL_TIM_Base_Start(&htim3) != HAL_OK)
@@ -91,7 +99,7 @@ void osc_prepareAWDGs() {
 	ADC_AnalogWDGConfTypeDef AnalogWDGConfig = { 0 };
 	AnalogWDGConfig.WatchdogNumber = ADC_ANALOGWATCHDOG_1;
 	AnalogWDGConfig.WatchdogMode = ADC_ANALOGWATCHDOG_SINGLE_REG;
-	AnalogWDGConfig.Channel = ADC_CHANNEL_2;
+	AnalogWDGConfig.Channel = trigSubCh ? ADC_CHANNEL_3 : ADC_CHANNEL_2;
 	AnalogWDGConfig.ITMode = (triggerADC == &hadc1) ? ENABLE : DISABLE;
 	AnalogWDGConfig.HighThreshold = 4095;
 	AnalogWDGConfig.LowThreshold = 0;
@@ -102,7 +110,7 @@ void osc_prepareAWDGs() {
 
 	AnalogWDGConfig.WatchdogNumber = ADC_ANALOGWATCHDOG_1;
 	AnalogWDGConfig.WatchdogMode = ADC_ANALOGWATCHDOG_SINGLE_REG;
-	AnalogWDGConfig.Channel = ADC_CHANNEL_3;
+	AnalogWDGConfig.Channel = trigSubCh ? ADC_CHANNEL_4 : ADC_CHANNEL_3;
 	AnalogWDGConfig.ITMode = (triggerADC == &hadc2) ? ENABLE : DISABLE;
 	AnalogWDGConfig.HighThreshold = 4095;
 	AnalogWDGConfig.LowThreshold = 0;
@@ -113,23 +121,7 @@ void osc_prepareAWDGs() {
 }
 
 void osc_setADCSamplingCycles() {
-	ADC_ChannelConfTypeDef sConfig = { 0 };
-	sConfig.Rank = ADC_REGULAR_RANK_1;
-	sConfig.SingleDiff = ADC_SINGLE_ENDED;
-	sConfig.OffsetNumber = ADC_OFFSET_NONE;
-	sConfig.Offset = 0;
 
-	//sConfig.SamplingTime = samplingTimes[terminalSettings.Fs_index];
-
-	sConfig.Channel = ADC_CHANNEL_2;
-	if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) {
-		Error_Handler();
-	}
-
-	sConfig.Channel = ADC_CHANNEL_3;
-	if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK) {
-		Error_Handler();
-	}
 }
 
 void osc_setTriggerLevel(double value) {
@@ -147,8 +139,8 @@ void osc_setTriggerLevel(double value) {
 }
 
 void osc_setPretrigger(double value) {
-	postTriggerSamples = terminalSettings.BufferLength * (1.0 - value);
-	pretriggerRequiresFullBuffer = (postTriggerSamples < currentBufferLength / 2);
+	postTriggerSamples = currentBufferLength * (1.0 - value);
+	pretriggerRequiresFullBuffer = value>0.5;
 }
 
 void osc_setSamplingFreq(double value) {
@@ -161,10 +153,11 @@ void osc_setSamplingFreq(double value) {
 }
 
 void osc_settrigch(uint8_t ch) {
-	if (ch == 1)
+	if (ch == 1 || ch == 3)
 		triggerADC = &hadc1;
-	else if (ch == 2)
+	else if (ch == 2 || ch == 4)
 		triggerADC = &hadc2;
+	trigSubCh = (ch <= 2) ? 0 : 1;
 }
 
 void osc_abort() {
@@ -172,5 +165,13 @@ void osc_abort() {
 	HAL_ADCEx_MultiModeStop_DMA(&hadc1);
 	HAL_DMA_Abort(hadc2.DMA_Handle);
 	oscStatus = idle;
+}
+
+void osc_setNumCh(uint8_t numChPerADC) {
+	osc_abort();
+	hadc1.Instance->SQR1 &= ~0b1111;
+	hadc1.Instance->SQR1 |= (numChPerADC - 1) & 0b1111;
+	hadc2.Instance->SQR1 &= ~0b1111;
+	hadc2.Instance->SQR1 |= (numChPerADC - 1) & 0b1111;
 }
 

@@ -62,7 +62,6 @@ extern DMA_HandleTypeDef hdma_adc2;
 extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
 extern TIM_HandleTypeDef htim1;
-extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim6;
 /* USER CODE BEGIN EV */
 
@@ -362,20 +361,6 @@ void TIM1_CC_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles TIM3 global interrupt.
-  */
-void TIM3_IRQHandler(void)
-{
-  /* USER CODE BEGIN TIM3_IRQn 0 */
-
-  /* USER CODE END TIM3_IRQn 0 */
-  HAL_TIM_IRQHandler(&htim3);
-  /* USER CODE BEGIN TIM3_IRQn 1 */
-
-  /* USER CODE END TIM3_IRQn 1 */
-}
-
-/**
   * @brief This function handles TIM6 global interrupt, DAC1 and DAC3 channel underrun error interrupts.
   */
 void TIM6_DAC_IRQHandler(void)
@@ -414,20 +399,6 @@ void FPU_IRQHandler(void)
   /* USER CODE BEGIN FPU_IRQn 1 */
 
   /* USER CODE END FPU_IRQn 1 */
-}
-
-/**
-  * @brief This function handles DMAMUX overrun interrupt.
-  */
-void DMAMUX_OVR_IRQHandler(void)
-{
-  /* USER CODE BEGIN DMAMUX_OVR_IRQn 0 */
-
-  /* USER CODE END DMAMUX_OVR_IRQn 0 */
-
-  /* USER CODE BEGIN DMAMUX_OVR_IRQn 1 */
-
-  /* USER CODE END DMAMUX_OVR_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
