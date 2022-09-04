@@ -31,8 +31,6 @@
 static TIM_HandleTypeDef *timer_pwm = &htim2;
 #define PWM_TIMER_CHANNEL  TIM_CHANNEL_4
 #define MAX_PWM_FREQ 20000000.0
-#define MAX_Fs 4000000.0
-#define PWM_PIN 8
 #define PWM_TIMER_MAX_ARR _32BIT
 
 static TIM_HandleTypeDef *timer_adc = &htim3;
@@ -45,5 +43,7 @@ static TIM_HandleTypeDef *timer_adc = &htim3;
 #define VREF_HIGH 3.3
 
 static const uint16_t bufferLengths[5] = { 256, 512, 1024, 2048, 4096 };
+
+static const uint16_t samplingCycles[] = {2,6,12,24,47,92,247,640};
 
 #endif /* INC_CONFIG_H_ */

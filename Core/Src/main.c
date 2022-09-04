@@ -59,7 +59,7 @@
 extern USBD_HandleTypeDef hUsbDeviceFS;
 
 volatile uint8_t checkConnectionFlag = 0;
-volatile uint8_t clockFailedFlag = 0;
+volatile uint8_t usingHSI_flag = 0;
 
 uint8_t rollingModeDataReady = 0;
 
@@ -68,7 +68,7 @@ uint8_t rollingModeDataReady = 0;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-
+uint8_t SystemClock_Config_HSE(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -93,13 +93,20 @@ int main(void) {
 	/* USER CODE BEGIN Init */
 	RCC->AHB1ENR |= 1111;
 
-	/* USER CODE END Init */
+#if 0
+  /* USER CODE END Init */
 
-	/* Configure the system clock */
-	SystemClock_Config();
+  /* Configure the system clock */
+  SystemClock_Config();
 
-	/* USER CODE BEGIN SysInit */
-
+  /* USER CODE BEGIN SysInit */
+#endif
+	HAL_RCC_DeInit();
+	if (!SystemClock_Config_HSE()) {
+		usingHSI_flag = 1;
+		HAL_RCC_DeInit();
+		SystemClock_Config();
+	}
 	/* USER CODE END SysInit */
 
 	/* Initialize all configured peripherals */
@@ -136,13 +143,10 @@ int main(void) {
 
 		if (comstatus == 2) {
 			com_print("$$IConnected");
+			if (usingHSI_flag)
+				com_print("$$WCrystal oscillator not used");
 			terminal_setpage(page_osc);
 			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
-		}
-
-		if (clockFailedFlag) {
-			clockFailedFlag = 0;
-			com_print("$$WHSE error, using HSI");
 		}
 
 		terminal_update();
@@ -196,12 +200,13 @@ void SystemClock_Config(void) {
 	/** Initializes the RCC Oscillators according to the specified parameters
 	 * in the RCC_OscInitTypeDef structure.
 	 */
-	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48 | RCC_OSCILLATORTYPE_HSE;
-	RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_HSI48;
+	RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+	RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
 	RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
 	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-	RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-	RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV2;
+	RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+	RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV4;
 	RCC_OscInitStruct.PLL.PLLN = 85;
 	RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
 	RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
@@ -220,12 +225,46 @@ void SystemClock_Config(void) {
 	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK) {
 		Error_Handler();
 	}
-	/** Enables the Clock Security System
-	 */
-	HAL_RCC_EnableCSS();
 }
 
 /* USER CODE BEGIN 4 */
+uint8_t SystemClock_Config_HSE(void) {
+	RCC_OscInitTypeDef RCC_OscInitStruct = { 0 };
+	RCC_ClkInitTypeDef RCC_ClkInitStruct = { 0 };
+
+	/** Configure the main internal regulator output voltage
+	 */
+	HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1_BOOST);
+	/** Initializes the RCC Oscillators according to the specified parameters
+	 * in the RCC_OscInitTypeDef structure.
+	 */
+	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48 | RCC_OSCILLATORTYPE_HSE;
+	RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+	RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
+	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+	RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+	RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV2;
+	RCC_OscInitStruct.PLL.PLLN = 85;
+	RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+	RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
+	RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
+	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+		return 0;
+	}
+	/** Initializes the CPU, AHB and APB buses clocks
+	 */
+	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+	RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+
+	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK) {
+		Error_Handler();
+	}
+	return 1;
+}
+
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	if (htim == &htim1) {
 		if ((oscTrigState == triggerNotWaiting || oscTrigType != trig_norm) && currentBufferLength != 1) {

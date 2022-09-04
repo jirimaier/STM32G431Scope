@@ -19,6 +19,9 @@ volatile uint32_t awdgTR1Part1;
 volatile uint32_t awdgTR1Part2;
 volatile uint8_t osc_singleTrigger;
 volatile uint8_t trigSubCh;
+volatile uint8_t fs_changed_flag;
+uint16_t osc_autoTrigMax;
+double Fs_max;
 
 volatile enum OscStatus {
 	paused, running, idle, finished
@@ -40,7 +43,7 @@ volatile ADC_HandleTypeDef *triggerADC;
 void osc_init();
 void osc_sendData();
 void osc_beginMeasuring();
-void osc_setADCSamplingCycles();
+void osc_setADCSamplingCycles(double fs);
 void osc_prepareAWDGs();
 void osc_setTriggerLevel(double value);
 void osc_setPretrigger(double value);

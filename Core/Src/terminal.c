@@ -61,7 +61,7 @@ uint8_t numberOfDigits(uint32_t number) {
 
 void terminal_draw() {
 	uint8_t len = sprintf(txBuffer, "$$Stermsize:nb;");
-			com_transmit(txBuffer, len);
+	com_transmit(txBuffer, len);
 	if (currentpage == page_osc)
 		com_transmit(terminal_pageframe_osc, sizeof(terminal_pageframe_osc));
 
@@ -85,7 +85,14 @@ void terminal_draw() {
 	if (currentnumberinput == input_bufferlength) {
 		com_transmit(terminal_keypad_uint, sizeof(terminal_keypad_uint));
 		com_transmit(terminal_keypad_buffersettings, sizeof(terminal_keypad_buffersettings));
-		uint8_t len = sprintf(txBuffer, "$$T\e[0m\e[1m\e[48;5;4m\e[7;6H<");
+		uint8_t len = sprintf(txBuffer, "$$T\e[0m\e[1m\e[48;5;4m\e[7;14H<");
+		com_transmit(txBuffer, len);
+	}
+
+	if (currentnumberinput == input_pretrig) {
+		com_transmit(terminal_keypad_uint, sizeof(terminal_keypad_uint));
+		com_transmit(terminal_keypad_pretrig, sizeof(terminal_keypad_pretrig));
+		uint8_t len = sprintf(txBuffer, "$$T\e[0m\e[1m\e[48;5;4m\e[7;8H<");
 		com_transmit(txBuffer, len);
 	}
 
@@ -170,7 +177,14 @@ void terminal_updateValues() {
 		len = sprintf(txBuffer, "$$T\e[0m\e[5;1HCh%d", terminalSettings.TrigCh);
 		com_transmit(txBuffer, len);
 
-		len = sprintf(txBuffer, "$$T\e[0m\e[7;1H%5d", terminalSettings.BufferLength);
+		len = sprintf(txBuffer, "$$T\e[0m\e[7;9H%5d", terminalSettings.BufferLength);
+		com_transmit(txBuffer, len);
+
+		int pretrig_percent = terminalSettings.PreTrigger * 100;
+		if(pretrig_percent == 100)
+			len = sprintf(txBuffer, "$$T\e[0m\e[7;5H100", pretrig_percent);
+		else
+			len = sprintf(txBuffer, "$$T\e[0m\e[7;5H%2d%%", pretrig_percent);
 		com_transmit(txBuffer, len);
 
 	} else if (currentpage == page_gen) {
@@ -184,16 +198,16 @@ void terminal_updateValues() {
 
 	if (currentnumberinput != input_nothing) {
 		if (terminal_numericinput == 0 && terminal_numericinput_has_decimal == 0) {
-			len = sprintf(txBuffer, "$$T\e[0m\e[7m\e[18;1H_");
+			len = sprintf(txBuffer, "$$T\e[0m\e[7m\e[20;1H_");
 			com_transmit(txBuffer, len);
 		} else {
 			if (terminal_numericinput_has_decimal == 0) {
-				len = sprintf(txBuffer, "$$T\e[0m\e[7m\e[18;1H%lu_", terminal_numericinput);
+				len = sprintf(txBuffer, "$$T\e[0m\e[7m\e[20;1H%lu_", terminal_numericinput);
 			} else {
 				if (terminal_numericinput_decimal == 0)
-					len = sprintf(txBuffer, "$$T\e[0m\e[7m\e[18;1H%lu._", terminal_numericinput);
+					len = sprintf(txBuffer, "$$T\e[0m\e[7m\e[20;1H%lu._", terminal_numericinput);
 				else
-					len = sprintf(txBuffer, "$$T\e[0m\e[7m\e[18;1H%lu.%lu_", terminal_numericinput, terminal_numericinput_decimal);
+					len = sprintf(txBuffer, "$$T\e[0m\e[7m\e[20;1H%lu.%lu_", terminal_numericinput, terminal_numericinput_decimal);
 			}
 		}
 		if (len > 12 + 18)
@@ -234,6 +248,9 @@ void terminal_command(uint8_t key) {
 		if (key == 'b')
 			terminal_setnumberinput(input_bufferlength);
 
+		if (key == 'p')
+			terminal_setnumberinput(input_pretrig);
+
 		if (key == 'c')
 			terminalSettings.BufferLength = 1;
 
@@ -258,7 +275,7 @@ void terminal_command(uint8_t key) {
 		}
 
 		if (key == 's') {
-			terminalSettings.TrigCh = (terminalSettings.TrigCh % (2*terminalSettings.NumChPerADC)) + 1;
+			terminalSettings.TrigCh = (terminalSettings.TrigCh % (2 * terminalSettings.NumChPerADC)) + 1;
 			terminal_triggerlineupdateneeded = 1;
 		}
 
@@ -388,6 +405,31 @@ void terminal_command(uint8_t key) {
 
 	}
 
+	if (currentnumberinput == input_pretrig) {
+		if (key == ' ') {
+			double value = terminal_numericinput + terminal_numericinput_decimal / pow(10, numberOfDigits(terminal_numericinput_decimal));
+			terminal_numberFinished(value);
+			terminal_numericinput = 0;
+		}
+
+		if (key == 'A') {
+			double value = 0;
+			terminal_numberFinished(value);
+			terminal_numericinput = 0;
+		}
+		if (key == 'B') {
+			double value = 50;
+			terminal_numberFinished(value);
+			terminal_numericinput = 0;
+		}
+		if (key == 'C') {
+			double value = 100;
+			terminal_numberFinished(value);
+			terminal_numericinput = 0;
+
+		}
+	}
+
 	if (key >= '0' && key <= '9') {
 		if (key == '0' && terminal_numericinput == 0)
 			terminal_numericinput_has_decimal = 1;
@@ -460,7 +502,7 @@ void terminal_setnumberinput(enum terminalnumberinput input) {
 	terminal_numericinput_is_negative = 0;
 
 	if (input == input_fs) {
-		terminal_inputmax = MAX_Fs;
+		terminal_inputmax = Fs_max / terminalSettings.NumChPerADC;
 		terminal_inputmin = 0;
 	}
 
@@ -472,6 +514,11 @@ void terminal_setnumberinput(enum terminalnumberinput input) {
 	if (input == input_bufferlength) {
 		terminal_inputmax = BUFFER_SIZE / terminalSettings.NumChPerADC;
 		terminal_inputmin = 1;
+	}
+
+	if (input == input_pretrig) {
+		terminal_inputmax = 100;
+		terminal_inputmin = 0;
 	}
 
 	if (input == input_pwmduty) {
@@ -500,6 +547,8 @@ void terminal_numberFinished(double value) {
 		pwm_setDuty(value);
 	if (currentnumberinput == input_bufferlength)
 		terminalSettings.BufferLength = value;
+	if (currentnumberinput == input_pretrig)
+		terminalSettings.PreTrigger = ((float) value) / 100.0;
 	terminal_setnumberinput(input_nothing);
 }
 
